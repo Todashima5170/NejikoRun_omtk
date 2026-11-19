@@ -1,45 +1,97 @@
+using Unity.VisualScripting;
 using UnityEngine;
+using static UnityEngine.EventSystems.StandaloneInputModule;
 
 public class NejikoMove : MonoBehaviour
 {
-    // 目的：ねじ子の移動を制御するスクリプト
-    // ねじ子の移動
-    // -> 1mをmoveSpeed秒で移動する
     [SerializeField]
-    private float moveSpeed = 1.0f; 
+    private float moveSpeed = 1.0f;
 
-    // ねじ子の移動は毎フレーム必ず行われる
+    [SerializeField]
+    private PlayerInput playerInput = null;
 
-    // データ型 = void(戻り値が無い時のメソッドのデータ型)
-    void Update()
+    private bool isMoveKeyInput = false;
+
+    private int axisMovePower = 1;
+
+    //ねじこが飛んでいる最中かどうかの判定
+    private bool isFlyFlag = false;
+    //ねじこが最初にいたY座標(高さ)
+
+    //落下速度
+    [SerializeField]
+    private float initialHeight = 0f;
+
+    private float fallSpeed = 10f;
+
+    private float totalTime = 0f;
+
+    //ジャンプパワー
+    [SerializeField]
+    private float jumpPower = 2f;
+
+    //private FlowStateTransitionEditor fallSpeed;
+
+    //ゲーム開始時にねじこの高さを取得
+    void Start()
     {
-        // 1mをmoveSpeed秒で移動するための移動量を計算
+        initialHeight = this.transform.position.y;
+    }
+
+    private void Update()
+    {
         float movePower = Time.deltaTime * moveSpeed;
-        /*
-        // 1秒間に60fps -> 10fps
-        // 1fps -> 1m
-        // 1秒間に60fps -> 1m*60fps = 60m
-        // 1秒間に10fps -> 1m*10fps = 10m
-        // Time.deltaTimeは前フレームからの経過時間を返す
-        // 1秒間に60fps -> 1/60 
-        // 1秒間に10fps -> 1/10
-        // moveSpeed = 10;
-        // 1秒間に60fps -> 1/60秒 / 10 = 1/600
-        // 1秒間に10fps -> 0.1 / 10 = 1/100
-        // Time.deltaTimeを使うとスペックに関係なく移動量を一定に出来る
-        // Vector3 ( X, Y, Z)*/
-        
-        // Translate->Vector3で指定の方向に移動させる
-        transform.Translate(0,0,movePower);
-        
-        // アニメーションの遷移
-        if(movePower > 0)
+        transform.Translate(0, 0, movePower);
+        if (movePower > 0)
         {
-            // コード上から走るアニメーションに遷移させる条件を満たす
             GetComponent<Animator>().SetBool("run", true);
-        }else
+        }
+        else
         {
             GetComponent<Animator>().SetBool("run", false);
         }
+        if (playerInput.inputMove.x == 0)
+        {
+            isMoveKeyInput = false;
+        }
+        if (playerInput.inputMove.x > 0 && isMoveKeyInput == false)
+        {
+            Debug.Log("右キー入力");
+            transform.Translate(axisMovePower, 0, 0);
+            isMoveKeyInput = true;
+        }
+        else if (playerInput.inputMove.x < 0 && isMoveKeyInput == false)
+        {
+            Debug.Log("左キー入力");
+            transform.Translate(axisMovePower * -1, 0, 0);
+            isMoveKeyInput = true;
+        }
+        if (playerInput.isJumpTrigger)
+        {
+            Debug.Log("ジャンプキー入力");
+            this.transform.position += Vector3.up * jumpPower;
+            //bool 0.1 true/false,飛んでいる/飛んでいないか
+            isFlyFlag = true;
+            
+        }
+        if(isFlyFlag == true)
+        {
+            //もしもねじこの現在のY座標(高さ)がinitialHeight(初期の初期の高さ)
+            //よりも低くなったら処理を止める
+            if (this.transform.position.y < initialHeight)
+            {
+                this.transform.position = new Vector3(this.transform.position.x, initialHeight, this.transform.position.z);
+                isFlyFlag = false;
+                totalTime = 0f;
+                return;
+
+            }
+            //ねじこを徐々に下げる処理
+            totalTime += Time.deltaTime;
+
+            this.transform.position -= Vector3.up / fallSpeed * totalTime;
+        }
+
+
     }
 }
